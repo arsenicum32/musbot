@@ -7,6 +7,11 @@ var bot = new TelegramBot(token, {
   polling: true
 });
 
+var pos = {
+  lon: false,
+  lat: false
+}
+
 bot.getMe().then(function(me){
     console.log('Hello! My name is %s!', me.first_name);
     console.log('My id is %s.', me.id);
@@ -28,7 +33,8 @@ function genkeys(){
   }
   return {
     reply_markup: JSON.stringify({
-      keyboard: args
+      keyboard: args,
+      "one_time_keyboard": true
     })
   };
 }
@@ -42,60 +48,50 @@ function sendAudio(msg) {
     bot.sendAudio(chatId, audio)
       .then(function (resp) {
         var messageId = resp.message_id;
-        bot.sendMessage(chatId, 'нравится?', genkeys('да',['нет']))
+        bot.sendMessage(chatId, 'нравится?', genkeys('отлично, посмотреть записку','да','нет'))
         //bot.forwardMessage(chatId, chatId, messageId);
       });
 }
 
 bot.on('location', function(msg){
-  var lon = msg.location.longitude,
-      lat = msg.location.latitude,
-      time = msg.date;
+  pos.lon = msg.location.longitude,
+  pos.lat = msg.location.latitude,
+  var time = msg.date;
   //console.log( JSON.stringify(msg, null, '\t') );
-  bot.sendMessage( msg.chat.id , 'Отлично вы поделились своей геолокацией ' + lon + ' ' + lat , {
-    reply_markup: JSON.stringify({
-      keyboard: [
-        ['хочу послушать музыку места'],
-        ['хочу добавить музыку']]
-    })
-  });
+  bot.sendMessage( msg.chat.id , 'Отлично вы поделились своей геолокацией!', genkeys('хочу послушать музыку места','хочу добавить музыку') );
 });
+
+bot.on('audio', function(msg){
+  console.log( JSON.stringify(msg, null, '\t') );
+  bot.sendMessage( msg.chat.id , 'ваша музыка сохранена и привязанна', genkeys('добавить описание') );
+})
 
 bot.on('voice', function(msg){
   console.log( JSON.stringify(msg, null, '\t') );
+  bot.sendMessage( msg.chat.id , 'ваша музыка сохранена и привязанна', genkeys('добавить описание') );
 })
-
-// Matches /love
-// bot.onText(/\/love/, function (msg) {
-//   var chatId = msg.chat.id;
-//   var opts = {
-//       reply_to_message_id: msg.message_id,
-//       reply_markup: JSON.stringify({
-//         keyboard: [
-//           ['Yes, you are the bot of my life ❤'],
-//           ['No, sorry there is another one...']]
-//       })
-//     };
-//     bot.sendMessage(chatId, 'Do you love me?', opts);
-// });
 
 bot.on('text', function (msg) {
   console.log( JSON.stringify(msg, null, '\t') );
   var chatId = msg.chat.id;
 
-  if(msg.text === 'хочу послушать музыку места'){
-    sendAudio(msg)
-  }else if(msg.text === 'хочу добавить музыку'){
-
-  }else{
-    bot.sendMessage(chatId , 'я не понимаю тебя...');
+  switch (msg.text) {
+    case 'хочу послушать музыку места':
+      sendAudio(msg)
+      break;
+    case 'хочу добавить музыку':
+      bot.sendMessage(chatId , 'добавьте аудио-файл или запишите');
+      break;
+    case 'да':
+      bot.sendMessage(chatId , 'ваш голос учтён :c');
+      break;
+    case 'нет':
+      bot.sendMessage(chatId , 'ваш голос учтён (:');
+      break;
+    case 'отлично, посмотреть записку':
+      bot.sendMessage(chatId , 'иду такой вижу дерево и так я счастлив...');
+      break;
+    default:
+      bot.sendMessage(chatId , 'я не понимаю тебя...');
   }
-
-  // bot.sendMessage(chatId, msg.text, {
-  //   reply_markup: JSON.stringify({
-  //     keyboard: [
-  //       [ (Math.random().toString()) ]
-  //     ]
-  //   })
-  // });
 });
